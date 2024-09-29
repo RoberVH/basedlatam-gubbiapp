@@ -1,0 +1,26 @@
+/* This file contains the css for the headbar component */
+
+
+
+.navbar {
+    background-color: rgb(250, 215, 151);
+    display:flex;
+    justify-content: center;
+}
+
+.navbar-item {
+    color:rgba(4, 28, 29, 0.493);
+    font-size:1rem;
+    font-weight: 700;
+    margin: 10px 0 0 10px;
+    padding: 5px
+}
+
+.menu {
+    margin-bottom:10px;
+}
+
+.usertitle {
+    margin-left: 100px;
+
+}

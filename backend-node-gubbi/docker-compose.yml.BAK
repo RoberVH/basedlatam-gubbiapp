@@ -1,0 +1,12 @@
+version: '3'
+
+services:
+   oferserver:
+      image: ofersrv
+      build: 
+        context: .
+        dockerfile: Dockerfile.dev
+      ports: 
+        - "4000":"4000"
+      volumes:
+         - .:/usr/src/srv

@@ -1,0 +1,11 @@
+version: '3'
+
+services:
+  oferserver:
+    image: robervh/ofersrv
+    ports: 
+      - 4000:4000
+    command: npm start
+    volumes:
+      - /usr/srv/node_modules
+      - .:/usr/srv
