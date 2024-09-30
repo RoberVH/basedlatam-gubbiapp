@@ -6,6 +6,46 @@ import { transferirTokens } from '../../lib/blockchain'; // Asegúrate de estar 
 import { ethers } from 'ethers'; // Importar ethers.js
 
 const Transferir = (props) => {
+
+/******************************************************************************* */  
+  const [file, setFile] = useState(null); 
+
+  const handleFileChange = (e) => {
+    setFile(e.target.files[0]);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!file) {
+      alert('Por favor, selecciona un archivo MP3');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('audio', file);
+
+    try {
+      const response = await fetch('http://tu-servidor.com/recognizer/transfer', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Error en la carga del archivo');
+      }
+
+      const data = await response.json();
+      console.log('Archivo subido exitosamente:', data);
+      // Aquí puedes manejar la respuesta exitosa
+    } catch (error) {
+      console.error('Error:', error);
+      // Aquí puedes manejar el error
+    }
+  };
+  //******************************** ***************************************************************/
+
+
+
   const [waiting, setWaiting] = useState(false);
   const [saldo, setSaldo] = useState(null); // Estado para guardar el saldo
   const [formData, setFormData] = useState({
@@ -48,8 +88,14 @@ const Transferir = (props) => {
 
   const handleTransferir = async (e) => {
     e.preventDefault();
+    handleSubmit()
+    return
     setWaiting(true);
     const { source, dest, cant } = formData;
+
+
+    
+
   
     if (!source || !dest || !cant) {
       alert('Por favor, completa todos los campos.');
@@ -75,6 +121,7 @@ const Transferir = (props) => {
       setWaiting(false);
     }
   };
+
 
   return (
     <div className="relative w-full h-screen overflow-hidden flex items-center justify-center">
@@ -146,7 +193,7 @@ const Transferir = (props) => {
               placeholder="Ingresa la cantidad a transferir"
             />
           </div>
-
+          <input type="file" accept=".mp3" onChange={handleFileChange} />
           <div className="flex justify-center">
             <button
               type="submit"

@@ -38,31 +38,39 @@ const upload = multer({
  * @param {*} res 
  * @param {*} next 
  */
+
 exports.transfer = (req, res, next) => {
 
-    try {
-      upload(req, res, function (err) {
-        if (err) {
-          return res.status(400).json({
-            status: false,
-            error: err.message
-          });
-        }
-        
-        if (!req.file) {
-          return res.status(400).json({
-            status: false,
-            error: 'No se ha subido ningún archivo'
-          });
-        }      
-          return res.status(200).json({
-            status: true,
-            entities: []
-          });
-        } catch(err) {
-      console.log(err);
-      res.status(500).json({
-        error: err
+  try {
+    upload(req, res, function (err) {
+      if (err) {
+        return res.status(400).json({
+          status: false,
+          error: err.message
+        });
+      }
+      
+      if (!req.file) {
+        return res.status(400).json({
+          status: false,
+          error: 'No se ha subido ningún archivo'
+        });
+      }
+
+      // El archivo se ha subido correctamente
+      return res.status(200).json({
+        status: true,
+        entities: [{
+          filename: req.file.filename,
+          path: req.file.path,
+          size: req.file.size
+        }]
       });
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({
+      error: err.message
+    });
+  }
 };
-}

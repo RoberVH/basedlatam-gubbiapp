@@ -8,6 +8,7 @@ const cron               =  require('node-cron');
 const users              =  require('./routes/users');
 const pagos              =  require('./routes/pagos');
 const sesiones           =  require('./routes/sesiones');
+const recognize          =  require('./routes/recognize');
 
 console.log('1 inicia Codigo server Backend');
 const port = process.env.PORT || 4000;
