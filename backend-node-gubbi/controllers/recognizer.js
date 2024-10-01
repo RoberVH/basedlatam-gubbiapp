@@ -1,32 +1,39 @@
 
-const multer      = require('multer');
-const path        = require('path');
-// const bcrypt      = require("bcrypt");
-// const jwt         = require("jsonwebtoken");
-// const User        = require("../models/users");
-const morgan      = require ('morgan')
+const multer              = require('multer');
+const path                = require('path');
+const { reconigzeVoice }  = require('../lib/recogVoice')
+const morgan              = require ('morgan')
 
-const TEMPORAL_FOLDER = '/tmp/'
+const TEMPORAL_FOLDER = path.join(__dirname, '..', '/uploads') // path returned for _dirname is controllers, bc we want it on proyect folder we upped it with those '..'
 
 // multer conf for tamporal storage
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'TEMPORAL_FOLDER'); // Directorio temporal del servidor
+    cb(null, TEMPORAL_FOLDER); // Directorio temporal del servidor
   },
   filename: function (req, file, cb) {
+    console.log('nomre', Date.now() + path.extname(file.originalname))
     cb(null, Date.now() + path.extname(file.originalname)); // Nombre único para el archivo
   }
 });
 
+// only accept mp3 files
+const fileFilter = (req, file, cb) => {
+  const filetypes = /mp3/
+  const extname = filetypes.test(path.extname(file.originalname).toLowerCase())
+  const mimetype = file.mimetype === 'audio/mpeg'
+
+  if (mimetype && extname) {
+    return cb(null, true)
+  } else {
+    cb(new Error('Solo archivos .mp3 son permitidos'))
+  }
+}
+
 const upload = multer({ 
   storage: storage,
-  fileFilter: function (req, file, cb) {
-    if (file.mimetype !== 'audio/mpeg') {
-      return cb(new Error('Solo se permiten archivos MP3'));
-    }
-    cb(null, true);
-  }
-}).single('audio'); // 'audio' es el nombre del campo en el formulario
+  fileFilter: fileFilter
+}).single('audio'); // 'audio' name of file field on form
 
 /**
  * transfer - Receive a message commanding transfer of cryptos/tokens/etc from one account to other
@@ -39,16 +46,16 @@ const upload = multer({
  * @param {*} next 
  */
 
-exports.transfer = (req, res, next) => {
+exports.transfer =  (req, res, next) => {
+  console.log('transfer hit')
 
-  try {
-    upload(req, res, function (err) {
-      if (err) {
-        return res.status(400).json({
-          status: false,
-          error: err.message
-        });
-      }
+  upload(req, res, async function (err) {
+    if (err) {
+      return res.status(400).json({
+        status: false,
+        error: err.message
+      });
+    }
       
       if (!req.file) {
         return res.status(400).json({
@@ -58,19 +65,14 @@ exports.transfer = (req, res, next) => {
       }
 
       // El archivo se ha subido correctamente
-      return res.status(200).json({
-        status: true,
-        entities: [{
-          filename: req.file.filename,
-          path: req.file.path,
-          size: req.file.size
-        }]
+      const result = await reconigzeVoice(req.file.path)
+      if (result.status)  return  res.status(200).json({
+              status: true,
+              entities: result.recognizedText
+            }) 
+          else   return res.status(505).json({
+        status: false,
+        error: result.error
       });
     });
-  } catch (err) {
-    console.log(err);
-    res.status(500).json({
-      error: err.message
-    });
   }
-};

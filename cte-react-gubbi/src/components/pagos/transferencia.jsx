@@ -9,13 +9,25 @@ const Transferir = (props) => {
 
 /******************************************************************************* */  
   const [file, setFile] = useState(null); 
+  const [entities, setVoiceTerms] = useState([])
+  const [waiting, setWaiting] = useState(false);
+  const [saldo, setSaldo] = useState(null); // Estado para guardar el saldo
+  const [formData, setFormData] = useState({
+    source: '',
+    dest: '',
+    cant: '',
+  });
+
+  const gubbiUser = useContext(UserContext);
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
+    console.log('file:', file)
+
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmitVoiceFile = async (e) => {
+    //e.preventDefault();
     if (!file) {
       alert('Por favor, selecciona un archivo MP3');
       return;
@@ -23,9 +35,10 @@ const Transferir = (props) => {
 
     const formData = new FormData();
     formData.append('audio', file);
-
+    console.log('formdata', formData)
+    console.log('file', file)
     try {
-      const response = await fetch('http://tu-servidor.com/recognizer/transfer', {
+      const response = await fetch('http://localhost:4000/recognize/transfer', {
         method: 'POST',
         body: formData,
       });
@@ -35,7 +48,17 @@ const Transferir = (props) => {
       }
 
       const data = await response.json();
+      setVoiceTerms(data.entities)
       console.log('Archivo subido exitosamente:', data);
+      const msg = data.entities.map((entity, index) => {
+        const props = Object.entries(entity) 
+          .map(([key, value]) => `${key}: ${value}`) 
+          .join('\n')
+        return `Propiedad ${index + 1}:\n${props}`
+      }).join('\n\n')
+      
+      // Mostrar el mensaje en un alert
+      alert(msg);
       // Aquí puedes manejar la respuesta exitosa
     } catch (error) {
       console.error('Error:', error);
@@ -46,15 +69,7 @@ const Transferir = (props) => {
 
 
 
-  const [waiting, setWaiting] = useState(false);
-  const [saldo, setSaldo] = useState(null); // Estado para guardar el saldo
-  const [formData, setFormData] = useState({
-    source: '',
-    dest: '',
-    cant: '',
-  });
 
-  const gubbiUser = useContext(UserContext);
 
   useEffect(() => {
     // Predefine la cuenta de origen con la publicKey del usuario
@@ -88,15 +103,9 @@ const Transferir = (props) => {
 
   const handleTransferir = async (e) => {
     e.preventDefault();
-    handleSubmit()
-    return
     setWaiting(true);
     const { source, dest, cant } = formData;
-
-
-    
-
-  
+      
     if (!source || !dest || !cant) {
       alert('Por favor, completa todos los campos.');
       setWaiting(false);
@@ -145,10 +154,18 @@ const Transferir = (props) => {
           </p>
         </div>
 
-        {/* Asistente de voz */}
-        <div className="flex justify-center mb-4">
-          <VoiceAssistant onVoiceInput={() => alert('Asistente de voz activado')} />
+
+        {/* Asistente de voz */}          
+        <div className="flex flex-col space-y-2 justify-center text-center  items-center  text-white" >
+        <input className="" name='audio' type="file" accept=".mp3" onChange={handleFileChange} />
+          <buttton onClick = {handleSubmitVoiceFile} className="my-2 px-2 py-1 text-center w-[300px] bg-green-500 text-white cursor-pointer ">
+            Iniciar Asistente de Voz
+          </buttton>
         </div>
+
+        {/* <div className="flex justify-center mb-4">
+          <VoiceAssistant onVoiceInput={() => alert('Asistente de voz activado')} />
+        </div> */}
 
         <form onSubmit={handleTransferir} className="space-y-4">
           <div>
@@ -193,7 +210,7 @@ const Transferir = (props) => {
               placeholder="Ingresa la cantidad a transferir"
             />
           </div>
-          <input type="file" accept=".mp3" onChange={handleFileChange} />
+
           <div className="flex justify-center">
             <button
               type="submit"
