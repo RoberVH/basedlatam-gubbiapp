@@ -1,3 +1,6 @@
 [submodule "gubbi-contract-rwa/lib/chainlink"]
 	path = gubbi-contract-rwa/lib/chainlink
 	url = https://github.com/smartcontractkit/chainlink
+[submodule "gubbi-contract-rwa/lib/openzeppelin-contracts"]
+	path = gubbi-contract-rwa/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
