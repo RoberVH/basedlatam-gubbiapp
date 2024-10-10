@@ -1,0 +1,3 @@
+[submodule "gubbi-contract-rwa/lib/chainlink"]
+	path = gubbi-contract-rwa/lib/chainlink
+	url = https://github.com/smartcontractkit/chainlink
