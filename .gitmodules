@@ -1,6 +1,0 @@
-[submodule "gubbi-contract-rwa/lib/forge-std"]
-	path = gubbi-contract-rwa/lib/forge-std
-	url = https://github.com/foundry-rs/forge-std
-[submodule "gubbi-contract-rwa/lib/openzeppelin-contracts"]
-	path = gubbi-contract-rwa/lib/openzeppelin-contracts
-	url = https://github.com/OpenZeppelin/openzeppelin-contracts
