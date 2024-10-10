@@ -1,5 +1,36 @@
-## Foundry
+# Gubbi App RWA Tokenization Contracts
 
+<strong>Gubbi APP. Smart Contracts to tokenized and trade  RWA Tokens</strong>
+
+**Based Latam Hackathon**
+
+*Oct, 2024* | *@rovicher.eth*
+
+### Dev Environment Setup 
+
+```
+    mkdir gubbi-rwa && cd gubbi-rwa
+    forge init
+    forge install OpenZeppelin/openzeppelin-contracts
+    forge install smartcontractkit/chainlink
+```
+add following section to foundry.toml
+```
+remappings = [
+    "@openzeppelin/=lib/openzeppelin-contracts/",
+    "@chainlink/=lib/chainlink/",
+    "@lib/=lib/",
+]
+```
+Note:  I used solidity compiler version 0.8.24 at contracts, so added this to foundry.toml
+```
+solc = "0.8.24"
+```
+
+
+<br><br>
+
+# Useful Forge boilerplate
 **Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
 
 Foundry consists of:
@@ -64,3 +95,4 @@ $ forge --help
 $ anvil --help
 $ cast --help
 ```
+.
