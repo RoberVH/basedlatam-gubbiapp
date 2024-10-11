@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.28;
+pragma solidity 0.8.24;
 
 import {ERC1155Supply, ERC1155} from "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import {OwnerIsCreator} from "@chainlink/contracts/src/v0.8/shared/access/OwnerIsCreator.sol";
@@ -9,7 +9,7 @@ import {OwnerIsCreator} from "@chainlink/contracts/src/v0.8/shared/access/OwnerI
  * THIS IS AN EXAMPLE CONTRACT THAT USES UN-AUDITED CODE.
  * DO NOT USE THIS CODE IN PRODUCTION.
  */
-contract ERC1155Core is ERC1155Supply, OwnerIsCreator {
+contract ERC1155Gubbi is ERC1155Supply, OwnerIsCreator {
     address internal s_issuer;
 
     // Optional mapping for token URIs
@@ -35,7 +35,7 @@ contract ERC1155Core is ERC1155Supply, OwnerIsCreator {
         emit SetIssuer(_issuer);
     }
 
-    function mint(address _to, uint256 _id, uint256 _amount, bytes memory _data, string memory _tokenUri)
+     function mint(address _to,  uint256 _id, uint256 _amount, bytes memory _data, string memory _tokenUri)
         public
         onlyIssuerOrItself
     {
