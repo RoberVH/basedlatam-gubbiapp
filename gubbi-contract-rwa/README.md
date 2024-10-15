@@ -30,6 +30,13 @@ solc = "0.8.24"
 
 <br><br>
 
+# Deployed to Base Sepolia
+ChainId: 84532 
+RPC: https://sepolia.base.org
+Explorer: https://sepolia.basescan.org
+
+
+
 # Useful Forge boilerplate
 **Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
 
