@@ -16,7 +16,7 @@ import {OwnerIsCreator} from '@chainlink/contracts/src/v0.8/shared/access/OwnerI
  * @author
  * @notice
  */
-contract ERC1155Gubbi is ERC1155Supply, OwnerIsCreator {
+contract ERC1155Gubbi is ERC1155, OwnerIsCreator {
     
     error ERC1155Gubi_CallerIsNotIssuer(address msgSender);
     error ERC1155Gubi_TokenNotActive(uint256 tokenId);

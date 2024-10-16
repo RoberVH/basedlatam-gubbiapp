@@ -1,13 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
-//import {ERC1155Supply, ERC1155} from "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import '@openzeppelin/contracts/token/ERC1155/IERC1155.sol';
-//import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
-//import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
-//import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import '@openzeppelin/contracts/access/AccessControl.sol';
 import '@openzeppelin/contracts/utils/Context.sol';
-import {OwnerIsCreator} from '@chainlink/contracts/src/v0.8/shared/access/OwnerIsCreator.sol';
+//import {OwnerIsCreator} from '@chainlink/contracts/src/v0.8/shared/access/OwnerIsCreator.sol';
 import {ERC1155Gubbi} from './ERC1155Gubbi.sol';
 
 /**
@@ -25,8 +22,9 @@ import {ERC1155Gubbi} from './ERC1155Gubbi.sol';
  *          of tokenization
  *
  */
-contract GubbiRWATokenization is OwnerIsCreator, Context {
-    ERC1155Gubbi private gubbiERC1155;
+contract GubbiRWATokenization is Context, AccessControl {
+    bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
+    bytes32 public constant VERIFIER_ROLE = keccak256('MINTER_ROLE');
 
     uint256 constant MAX_INTEREST = 100000000; // Max Interest to ask for in a tokenization
 
@@ -60,24 +58,25 @@ contract GubbiRWATokenization is OwnerIsCreator, Context {
         //   3% = 3000000
     }
 
-    // Verfier information data
-    struct verifierInfo {
-        string verifierName;
-        uint8 reputation; // points Verifier has won
-    }
+    
+    
+    // Gubbi-Verifier reviewing reputation 
+    // it shows how good deals approbed by the verifier
+    mapping(address verifierAddress => uint16 ) public verifierReputation;
 
-    // Gubbi-approve Verifier white-list
-    mapping(address verifierAddress => verifierInfo) public verifiersWhiteList;
+    // Gubbi-tokenizer paying reputation 
+    // it shows credit qulification based on repayment history of the tokenizer (user creating RWA)
+    mapping(address tokenizer => uint16 ) public tokenizerReputation;
 
     // tokenId data Control information
-    mapping(uint256 tokenId => tokenMetadata) rwaControlData;
+    mapping(uint256 tokenId => tokenMetadata)  rwaControlData;
 
-    // whitelist of verifiers
 
     // Optional mapping for token URIs
     mapping(uint256 tokenId => string) private _tokenURIs;
 
     uint256 private s_tokenIdCount = 0;
+    ERC1155Gubbi private gubbiERC1155;
 
     event rwaCreatedEvent(
         uint256 indexed tokenId,
@@ -85,17 +84,18 @@ contract GubbiRWATokenization is OwnerIsCreator, Context {
         address indexed owner
     );
 
-    modifier onlyVerifiers() {
-        address msgSender = _msgSender();
-        if (bytes(verifiersWhiteList[msgSender].verifierName).length == 0) {
-            revert GubbiRWAT_AddressIsNotVerifier(msgSender);
-        }
-        _;
-    }
+    event verifierRevoke(
+        address indexed _verifier,
+        address indexed _admin
+    );
 
     constructor(address _ERC1155GubbiAddress) {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender); // sender has granting and revoking roles permissions now
+        _grantRole(ADMIN_ROLE, msg.sender);         // sender also has admin role permission now
+        _setRoleAdmin(VERIFIER_ROLE, ADMIN_ROLE);   // ADMIN_ROLE can manage VERIFIER_ROLE (grant and revok Verifier roles ) 
         gubbiERC1155 = ERC1155Gubbi(_ERC1155GubbiAddress);
     }
+
 
     /**
      * @notice Creates a new Real-World Asset (RWA) tokenization event.
@@ -116,14 +116,14 @@ contract GubbiRWATokenization is OwnerIsCreator, Context {
         uint256 _amountTokens,
         uint256 _totalPrice,
         uint256 _interest
-    ) public {
+    ) external {
         if (_interest > MAX_INTEREST) {
             revert GubbiRWAT_InterestRateExceedsLimit(_interest, MAX_INTEREST);
         }
-        //  tokens are minted to contract to allow selling
-        address sender = _msgSender();
+        //  tokens are minted to msg.sender
+        address sender = msg.sender;
         gubbiERC1155.mint(
-            _msgSender(),
+            sender,
             s_tokenIdCount,
             _amountTokens,
             '',
@@ -144,47 +144,58 @@ contract GubbiRWATokenization is OwnerIsCreator, Context {
 
     // Setters ****************************************************************************
 
-    function setVerifierIntoApprovedList(address _verifier, string memory _name ) external onlyOwner {
-        if (_verifier == address(0x0) || bytes(_name).length == 0) {
-            revert GubbiRWAT_WrongVerifierData(_verifier, _name);
-        }
-        verifiersWhiteList[_verifier] = verifierInfo({
-            verifierName: _name,
-            reputation: 0
-        });
+    // Grant ADMIN_ROLE
+    function setAdmin(address _admin) external onlyRole(DEFAULT_ADMIN_ROLE) {
+            _grantRole(ADMIN_ROLE, _admin);
+    }
+    // Grant VERIFIER ROLE
+    function setVerifier(address _verifier) external onlyRole(ADMIN_ROLE) {
+            _grantRole(VERIFIER_ROLE, _verifier);
     }
 
-    // Verifier must register as verifier of RWA Tokenization
-    function setVerifier(uint256 _tokenId) external onlyVerifiers {
-        address msgSender = _msgSender();
-        if (bytes(verifiersWhiteList[msgSender].verifierName).length == 0) {
-            revert GubbiRWAT_AddressIsNotVerifier(msgSender); // Esto detiene la ejecución
-        }
-        rwaControlData[_tokenId].verifier = msgSender;
+    // REvoke verifier role
+    function setVerifierRevokedRole(address _verifier ) external onlyRole(ADMIN_ROLE) {
+            _revokeRole(VERIFIER_ROLE,_verifier);
+            emit verifierRevoke(_verifier, msg.sender);
     }
 
-    function setUnpausedTokens(uint256 _tokenId) public onlyVerifiers {
-        address msgSender = _msgSender();
+    // Verifier register themselves as verifier of a specific RWA Tokenization
+    function setRWAVerifier(uint256 _tokenId) external onlyRole(VERIFIER_ROLE) {
+        rwaControlData[_tokenId].verifier = msg.sender;
+    }
+
+    // A safe guard in case something goes wrong with previous verifier
+    function changeVerifier(uint _tokenId, address _newVerifier) external onlyRole(ADMIN_ROLE) {
+        if (!hasRole(VERIFIER_ROLE, _newVerifier)) {
+            revert GubbiRWAT_NotRWAVerifier(_tokenId, _newVerifier);
+        }
+        rwaControlData[_tokenId].verifier = _newVerifier;
+    }
+
+    // A verifier has checked the tokenization deal nad approves it for trading
+    function setUnpausedTokens(uint256 _tokenId) external onlyRole(VERIFIER_ROLE) {
+        address msgSender = msg.sender;
         if (rwaControlData[_tokenId].verifier != msgSender) {
             revert GubbiRWAT_NotRWAVerifier(_tokenId, msgSender);
         }
         gubbiERC1155.unpauseToken(_tokenId);
     }
 
-    function setAssetStatus(
-        uint256 _tokenId,
-        AssetTokenizationStatus status
-    ) private onlyOwner {
-        if (
-            status == AssetTokenizationStatus.VERIFIED &&
-            rwaControlData[_tokenId].verifier != _msgSender()
-        ) {
+    function setPauseTokens(uint _tokenId) external onlyRole(VERIFIER_ROLE) {
+        address msgSender = msg.sender;
+        if (rwaControlData[_tokenId].verifier != msgSender) {
+            revert GubbiRWAT_NotRWAVerifier(_tokenId, msgSender);
+        }
+        gubbiERC1155.unpauseToken(_tokenId);
+    }
+    function setVerifiedStatus(uint256 _tokenId) external onlyRole(VERIFIER_ROLE) {
+        if (rwaControlData[_tokenId].verifier != msg.sender) {
             revert GubbiRWAT_OnlyVerifierSetVERIFICATION(_tokenId);
         }
-        rwaControlData[_tokenId].status = status;
+        //rwaControlData[_tokenId].status = AssetTokenizationStatus.VERIFIED;
+        rwaControlData[0].totalPrice = 700e8;
+        rwaControlData[0].status=AssetTokenizationStatus.VERIFIED;
     }
-
-
 
     // getters  ****************************************************************************
 
@@ -199,4 +210,5 @@ contract GubbiRWATokenization is OwnerIsCreator, Context {
     ) public view returns (tokenMetadata memory) {
         return rwaControlData[_tokenId];
     }
+ 
 }
