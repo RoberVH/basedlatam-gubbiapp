@@ -20,8 +20,10 @@ contract GubbiRWATokenizationTest is Test {
     
     uint256 constant MAX_INTEREST = 100000000;
     uint256 constant TOKEN_AMOUNT = 1000;
-    uint256 constant validInterest = 5000000; // 5%
-    uint256 constant totalPrice = 2000e8; // 2000 USDC
+    uint256 constant VALID_INTEREST = 5000000; // 5%
+    uint256 constant TOTAL_PRICE = 2000e8; // 2000 USDC
+    uint256 constant NINETY_DAYS = 7_776_000; // 90 dias en Unix epoch time
+    
     
 
     function setUp() public {
@@ -90,6 +92,9 @@ contract GubbiRWATokenizationTest is Test {
         vm.stopPrank();
     }
 
+
+
+
     function grantPermissions(address _user, address _verifier) public {
         vm.prank(owner);
         rwaTokenization.setAdmin(_user);
@@ -133,6 +138,27 @@ contract GubbiRWATokenizationTest is Test {
         rwaTokenization.changeVerifier(0,user3);
         vm.stopPrank();
     }
+
+    function testTryingOverwriteVerifier() public {
+        GubbiRWATokenization.tokenMetadata memory metadata = CreateRWATokenization(user2, 0);
+        grantPermissions(user1, verifier1);
+          // first set  verifier1 on tokenId 0
+        grantPermissions(user2, verifier1);
+        grantPermissions(user2, verifier2);
+        vm.startPrank(verifier1);
+        rwaTokenization.setRWAVerifier(0);
+        metadata = rwaTokenization.getRWAControlData(0);  // bring data back
+        assertEq(metadata.verifier, verifier1);
+        vm.stopPrank();
+        vm.startPrank(verifier2);
+       vm.expectRevert(
+           abi.encodeWithSelector(
+                GubbiRWATokenization.GubbiRWAT_AlreadyExistsRWAVerifier.selector, verifier1, verifier2
+            )
+        );        
+        rwaTokenization.setRWAVerifier(0);  // Try to overwrite verifier2 obre verifier1 on token 0
+        vm.stopPrank();
+    }
     
     function testRevokeRoleFailed() public {
        //Non-ADMIN_ROLE user tries to set other Admin
@@ -170,8 +196,9 @@ contract GubbiRWATokenizationTest is Test {
         vm.prank(user);
         rwaTokenization.createRWATokenization(
             TOKEN_AMOUNT,
-            totalPrice,
-            validInterest
+            TOTAL_PRICE,
+            VALID_INTEREST,
+            90 days
         );
         GubbiRWATokenization.tokenMetadata memory metadata = rwaTokenization
             .getRWAControlData(presentIdToken); // first tokenId = 0
@@ -184,7 +211,7 @@ contract GubbiRWATokenizationTest is Test {
             memory metadata = CreateRWATokenization(user2, 0);
         assertEq(gubbiTokens.balanceOf(user2, metadata.tokenId), 1000);
         assertEq(metadata.issuer, user2);
-        assertEq(metadata.interest, validInterest);
+        assertEq(metadata.interest, VALID_INTEREST);
         assertEq(metadata.issuer, user2);
         assertEq(
             uint256(metadata.status),
@@ -221,7 +248,7 @@ contract GubbiRWATokenizationTest is Test {
 
     // Test that creating a tokenization with an invalid interest rate fails
     function testCreateExceededMaxInterestRWA() public {
-        uint256 invalidInterest = MAX_INTEREST + 1;
+        uint256 inVALID_INTEREST = MAX_INTEREST + 1;
 
         vm.prank(owner); // Mock that the owner is sending the transaction
         vm.expectRevert(
@@ -229,16 +256,99 @@ contract GubbiRWATokenizationTest is Test {
                 GubbiRWATokenization
                     .GubbiRWAT_InterestRateExceedsLimit
                     .selector,
-                invalidInterest,
+                inVALID_INTEREST,
                 MAX_INTEREST
             )
         );
         rwaTokenization.createRWATokenization(
             TOKEN_AMOUNT,
-            totalPrice,
-            invalidInterest
+            TOTAL_PRICE,
+            inVALID_INTEREST,
+            90 days
         );
     }
 
+
+
+/**********************************************************************************************************/
+
+
+    function testModifyRWA() public {
+        GubbiRWATokenization.tokenMetadata memory metadata1 = CreateRWATokenization(user1, 0);
+        
+        // Test 1: Successful change of price
+        vm.prank(user1);
+        rwaTokenization.setPrice(0, TOTAL_PRICE + 1000e8);
+        metadata1 = rwaTokenization.getRWAControlData(0);
+        assertEq(metadata1.totalPrice, TOTAL_PRICE + 1000e8);
+        
+        // Test 2: Successful change of interest
+        vm.prank(user1);
+        rwaTokenization.setInterest(0, VALID_INTEREST * 2);
+        metadata1 = rwaTokenization.getRWAControlData(0);
+        assertEq(metadata1.interest, VALID_INTEREST * 2);
+        
+        // Test 3: Test new maturityPeriod function
+        vm.prank(user1);
+        rwaTokenization.setMaturityPeriod(0, 365 days);
+        metadata1 = rwaTokenization.getRWAControlData(0);
+        assertEq(metadata1.maturityPeriod, 365 days);
+
+        // Test 4: Failed change - user not issuer of RWA
+        vm.prank(user2);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                GubbiRWATokenization.GubbiRWAT_NotYourRWA.selector, 0
+            )
+        );
+        rwaTokenization.setPrice(0, TOTAL_PRICE + 1000e8);
+
+
+        // Test 6: Change status to VERIFIED and test modifications fail
+        vm.prank(owner);
+        rwaTokenization.setAdmin(user1);
+        vm.prank(user1);
+        rwaTokenization.setVerifier(verifier1);
+            
+        vm.startPrank(verifier1);
+        rwaTokenization.setRWAVerifier(0);
+        rwaTokenization.setVerifiedStatus(0);
+        vm.stopPrank();
+  
+        // Test 7: All modifications should fail after VERIFIED
+        vm.startPrank(user1);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                GubbiRWATokenization.GubbiRWAT_CannotModifyafterVerified.selector, 0
+            )
+        );
+        rwaTokenization.setPrice(0, TOTAL_PRICE * 2);
+        
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                GubbiRWATokenization.GubbiRWAT_CannotModifyafterVerified.selector, 0
+            )
+        );
+        rwaTokenization.setInterest(0, VALID_INTEREST * 2);
+    
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                GubbiRWATokenization.GubbiRWAT_CannotModifyafterVerified.selector, 0
+            )
+        );
+        rwaTokenization.setMaturityPeriod(0, 180 days);
+        vm.stopPrank();
+    
+        // Test 8: failes cancelation of a RWA that is VERIFIED
+        vm.startPrank(user1);
+           vm.expectRevert(
+                abi.encodeWithSelector(
+                GubbiRWATokenization.GubbiRWAT_CannotModifyafterVerified.selector, 0    // token Id = 0 not own by user2
+            )
+        );        
+        rwaTokenization.setCancelRWA(0);
+        vm.stopPrank();
+   
+    }
 
 }
