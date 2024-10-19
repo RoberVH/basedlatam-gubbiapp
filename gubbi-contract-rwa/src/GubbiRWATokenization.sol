@@ -3,10 +3,10 @@ pragma solidity 0.8.24;
 
 import '@openzeppelin/contracts/token/ERC1155/IERC1155.sol';
 import '@openzeppelin/contracts/access/AccessControl.sol';
+import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 //import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import '@openzeppelin/contracts/utils/Context.sol';
-//import {OwnerIsCreator} from '@chainlink/contracts/src/v0.8/shared/access/OwnerIsCreator.sol';
 import {ERC1155Gubbi} from './ERC1155Gubbi.sol';
 
 /**
@@ -24,7 +24,7 @@ import {ERC1155Gubbi} from './ERC1155Gubbi.sol';
  *          of tokenization
  *
  */
-contract GubbiRWATokenization is Context, AccessControl {
+contract GubbiRWATokenization is Context, AccessControl, IERC1155Receiver   {
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
     bytes32 public constant VERIFIER_ROLE = keccak256('MINTER_ROLE');
     address public constant BASE_SEPOLIA_ERC20 = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;  // reference from CIRCLE ( https://www.circle.com/en/multi-chain-usdc/base )
@@ -136,6 +136,14 @@ contract GubbiRWATokenization is Context, AccessControl {
         gubbiERC1155 = ERC1155Gubbi(_ERC1155GubbiAddress);
     }
 
+ function onERC1155Received(address operator, address from, uint256 id, uint256 value, bytes calldata data) public virtual override returns (bytes4) {
+        return this.onERC1155Received.selector;
+    }
+
+    // Esta función es requerida para recibir lotes de tokens
+    function onERC1155BatchReceived(address operator,address from, uint256[] calldata ids, uint256[] calldata values, bytes calldata data) public virtual override returns (bytes4) {
+        return this.onERC1155BatchReceived.selector;
+    }
 
     /**
      * @notice Creates a new Real-World Asset (RWA) tokenization event.
@@ -221,13 +229,8 @@ contract GubbiRWATokenization is Context, AccessControl {
         // get the payment USDC tokens from buyer to contract Gubbi
         require(usdc.transferFrom(msg.sender, address(this), _buyingAmount), "Payment Transfer failed");
         // send the rwa tokens to buyer
-        try gubbiERC1155.safeTransferFrom(
-                metadata.issuer, 
-                msg.sender, 
-                _tokenId, 
-                _buyingAmount, 
-                ""                  //  Este transfer falla por ERC1155Gubi_TokenNotActive(0),  deberia poder cachar este error, investigar
-        )   {   
+        try gubbiERC1155.safeTransferFrom(metadata.issuer, msg.sender, _tokenId, _buyingAmount, "" )
+            {   
             //usdc.transferFrom(msg.sender,  address(this), _buyingAmount);
             // check how many tokens left for selling of the token
             tokenBalance = gubbiERC1155.balanceOf(metadata.issuer, _tokenId);
@@ -273,14 +276,19 @@ contract GubbiRWATokenization is Context, AccessControl {
 
     // Creditors redeem their tokens 
     function tokensRedemption(uint256 _tokenId) external {
+        address sender = msg.sender;
         tokenMetadata memory metadata  = rwaControlData[_tokenId];
-        uint256 dueBalance= gubbiERC1155.balanceOf(msg.sender, _tokenId);
+        uint256 dueBalance= gubbiERC1155.balanceOf(sender, _tokenId);
         if (dueBalance == 0) {
-            revert GubbiRWAT_NotTokenHolder(_tokenId, msg.sender);
+            revert GubbiRWAT_NotTokenHolder(_tokenId, sender);
         }
         if (metadata.status!= AssetTokenizationStatus.PAYOFF) {
             revert  GubbiRWAT_NotRepaidYet(_tokenId);
         }
+        // translate to contract and burn the redeened tokens
+        gubbiERC1155.safeTransferFrom(sender, address(this),_tokenId, dueBalance, "");
+        gubbiERC1155.burn(address(this), _tokenId,dueBalance);
+
         uint tokenstoRedeemplusinteres = (dueBalance * ( 1e6 + metadata.interest)) / 1e6;
         require(usdc.transfer(msg.sender, tokenstoRedeemplusinteres), "Transfer failed");
     }

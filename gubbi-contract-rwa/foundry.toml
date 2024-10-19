@@ -8,4 +8,10 @@ remappings = [
     "@lib/=lib/",
 ]
 
+[etherscan]
+base-sepolia = { key = "${BASESCAN_API_KEY}" }
+
+[rpc_endpoints]
+base-sepolia = "${FORK_TEST}"
+
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

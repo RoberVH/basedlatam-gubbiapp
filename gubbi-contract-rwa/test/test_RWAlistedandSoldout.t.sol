@@ -32,8 +32,12 @@ contract test_RWAlistedandSoldout is Test {
 
     ERC1155Gubbi public gubbiTokens;
     GubbiRWATokenization public rwaTokenization;
-    address public constant BASE_SEPOLIA_ERC20 = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;  // reference from CIRCLE ( https://www.circle.com/en/multi-chain-usdc/base )
-    ITokenERC20forTesting usdc = ITokenERC20forTesting(BASE_SEPOLIA_ERC20);
+    // ERC20 contract links reference from CIRCLE ( https://www.circle.com/en/multi-chain-usdc/base )
+    address public constant  BASE_SEPOLIA_ERC20 = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;  
+    address public constant  BASE_MAINNET_ERC20 = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913;  
+    address public constant BASE_ERC20 = BASE_SEPOLIA_ERC20;
+    
+    ITokenERC20forTesting usdc = ITokenERC20forTesting(BASE_ERC20);
     
 
 
@@ -162,10 +166,11 @@ contract test_RWAlistedandSoldout is Test {
             rwaTokenization.listRWA(1);
             assertEq( rwaTokenization.getRWAControlData(1).listedDay, block.timestamp,"BAD LISTED DAY");
         vm.stopPrank();
+        // allow contract to transfer our usdc tokens to buy the RWA tokens
         vm.prank(userBuyer1);
-            usdc.approve(address(rwaTokenization), 500 * 1e6); 
+            usdc.approve(address(rwaTokenization), 2500 * 1e6); 
         vm.prank(userBuyer2);
-            usdc.approve(address(rwaTokenization), 500 * 1e6); 
+            usdc.approve(address(rwaTokenization), 1000 * 1e6); 
         vm.prank(userBuyer3);
             usdc.approve(address(rwaTokenization), 2500 * 1e6);                         
         // now we need to unpaused the tokens of tokenID 0. This is the RWA verifier task
@@ -174,7 +179,7 @@ contract test_RWAlistedandSoldout is Test {
             rwaTokenization.setUnpausedTokens(1);
         vm.stopPrank();
         // rwa token 1 issued 3500 tokens
-        vm.prank(userBuyer1);
+        vm.prank(userBuyer1); 
             rwaTokenization.buyRWATokens(1, 1000 * 1e6);       // left 2500 tokens
         assertEq(gubbiTokens.balanceOf(userBuyer1,1), 1000 * 1e6);
         vm.prank(userBuyer2);
@@ -235,10 +240,6 @@ contract test_RWAlistedandSoldout is Test {
         uint user1Bal= usdc.balanceOf(user1);
         deal(address(usdc), user1, user1Bal + (1000 * 1e6));  // they won 1000 USDC with the capital loan!
         uint repaidLoanQty = (metadata1.issuedTokens * (1e6 + metadata1.interest ))/ 1e6; // scale back to usdc decimals 
-        // console.log('User1 bal', usdc.balanceOf(user1));
-        // console.log('issuedTokens', metadata1.issuedTokens);
-        // console.log('interest', metadata1.interest);
-        // console.log("to  repaid;",repaidLoanQty);
         vm.startPrank(user1);
             usdc.approve(address(rwaTokenization), repaidLoanQty);
             rwaTokenization.repaidTokens(1);
@@ -246,11 +247,15 @@ contract test_RWAlistedandSoldout is Test {
         // lets have userBuyer2 collect they repayment
         // userBuyer has bougth 1000 1e6 tokens (1000 USDC) from RWA tokenId 1
          deal(address(usdc), userBuyer2,  (0 * 1e6)); // let's clear previous userBuyer USDC tokens balance for clarity
-        vm.prank(userBuyer2);
+        vm.startPrank(userBuyer2);
+            gubbiTokens.setApprovalForAll(address(rwaTokenization), true);
             rwaTokenization.tokensRedemption(1);
+        vm.stopPrank();
         uint userBuyer2Bal= usdc.balanceOf(userBuyer2);
         console.log('UserBuyer bal', userBuyer2Bal);
         assertEq(userBuyer2Bal, (1000 + 50) * 1e6 );    // user will receive their original 1000 loan plus 50 USDC of interest
+        console.log('rwaGubbi cto saldo tokenID 0: ', gubbiTokens.balanceOf(address(rwaTokenization),0));
+        assertEq(gubbiTokens.balanceOf(address(rwaTokenization),0),0 );    
     }
 
 }
