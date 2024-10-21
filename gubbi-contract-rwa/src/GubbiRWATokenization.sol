@@ -29,7 +29,6 @@ contract GubbiRWATokenization is Context, AccessControl, IERC1155Receiver   {
     bytes32 public constant VERIFIER_ROLE = keccak256('MINTER_ROLE');
     address public constant BASE_SEPOLIA_ERC20 = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;  // reference from CIRCLE ( https://www.circle.com/en/multi-chain-usdc/base )
 
-
     uint256 constant MAX_INTEREST = 100000000; // Max Interest to ask for in a tokenization
 
     error GubbiRWAT_InterestRateExceedsLimit(

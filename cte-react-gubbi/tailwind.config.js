@@ -1,8 +1,9 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
-    './src/**/*.{js,jsx,ts,tsx}',  // Asegúrate de que Tailwind busque las clases en los archivos React
-    './public/index.html'
+    './pages/**/*.{js,jsx,ts,tsx}',  // Busca clases en las páginas de Next.js
+    './components/**/*.{js,jsx,ts,tsx}',  // Busca clases en los componentes
+    './public/**/*.html',  // Busca clases en los archivos HTML dentro de /public (si los tienes)
   ],
   theme: {
     extend: {

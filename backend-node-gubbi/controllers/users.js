@@ -1,29 +1,29 @@
-const mongoose    = require("mongoose");
-const bcrypt      = require("bcrypt");
-const jwt         = require("jsonwebtoken");
-const User        = require("../models/users");
-const morgan      = require ('morgan')
+const mongoose = require("mongoose");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const User = require("../models/users");
+const morgan = require('morgan');
+const { ethers } = require('ethers'); // Importar ethers.js una sola vez
 
-
+// Función para el login de usuario
 exports.user_login = (req, res, next) => {
-  //morgan(':method :host :status :res[content-length] - :response-time ms'); // This is a modified version of morgan's tiny predefined format string.
-  console.log('req.body', req.body)
+  console.log('req.body', req.body);
   User.find({ username: req.body.username })
     .exec()
     .then(user => {
       if (user.length < 1) {
         return res.status(401).json({
-          message: "Falló Authorización"
+          message: "Falló Autorización"
         });
       }
       bcrypt.compare(req.body.password, user[0].password, (err, result) => {
         if (err) {
           return res.status(401).json({
-            message: "Falló Authorización"
+            message: "Falló Autorización"
           });
         }
         if (result) {
-          console.log('recuperado:',user[0]);
+          console.log('recuperado:', user[0]);
           const token = jwt.sign(
             {
               username: user[0].username,
@@ -41,12 +41,12 @@ exports.user_login = (req, res, next) => {
             token: token,
             username: user[0].username,
             publickey: user[0].publickey,
+            privatekey: user[0].privatekey, ////PARA TEST 
             cellnumber: user[0].cellnumber,
-
           });
         }
         res.status(401).json({
-          message: "Falló Authorización"
+          message: "Falló Autorización"
         });
       });
     })
@@ -58,59 +58,39 @@ exports.user_login = (req, res, next) => {
     });
 };
 
-// SignUp un nuevo usuario
-exports.user_signup = (req, res, next) => {
-     // Checar si el nombre de usuario ya esta tomado y rechaza si es asi
-     console.log('req.body', req.body)
-     User.find({username: req.body.username})
-    .exec()
-    .then(user => {
-        if (user.length!=0) {
-          console.warn('Usuario ya existe');
-          res.status(500).json({message: 'Usuario ya existe'})
-        } else {
-          // user nuevo, intentar el alta del usuario 
-          // encripta el password
-          bcrypt.hash(req.body.password, 10, (err, hash) => {
-            if (err) {
-                console.log('error en hashing', err)
-                res.status(500).json({
-                error: err
-              });
-            } else {   
-              // OK crear usuario
-              let cellnumber=  req.body.cellnumber ?? ''  // cellnumber opcional, previene si no existe
-              const user = new User({
-                  _id:        new mongoose.Types.ObjectId(),
-                  username:      req.body.username,
-                  cellnumber:    cellnumber,
-                  password:      hash,    // salva el hash para validar password en cada login
-                  publickey:     publickey,    
-                  privatekey:     privatekey,    
-                });
-                user.save()
-                  .then(result => {
-                    console.log('resultado:',result);
-                    res.status(201).json({
-                      message: "Usuario creado exitosamente"
-                    });
-                  })
-                  .catch(err => {
-                    console.log(err);
-                    res.status(500).json({
-                    message: err
-                    });
-                  });
-                  }
-          })
+// Función para registrar un nuevo usuario
+exports.user_signup = async (req, res, next) => {
+    try {
+        const existingUser = await User.find({ username: req.body.username }).exec();
+        if (existingUser.length) {
+            return res.status(400).json({ message: 'Usuario ya existe' });
         }
-      }).catch ((error) =>{
-          console.warn(error);
-          res.status(500).json({message: error}); 
-          return;
-      })
 
+        // Generar la wallet utilizando ethers.js
+        const provider = new ethers.JsonRpcProvider(process.env.BASE_SEPOLIA_RPC_URL);
+        const wallet = ethers.Wallet.createRandom();
+        const connectedWallet = wallet.connect(provider);
+
+        // Encriptar el password
+        const hashedPassword = await bcrypt.hash(req.body.password, 10);
+
+        const newUser = new User({
+            _id: new mongoose.Types.ObjectId(),
+            username: req.body.username,
+            password: hashedPassword,
+            cellnumber: req.body.cellnumber || '',
+            publickey: wallet.address,
+            privatekey: wallet.privateKey, // En producción, debes encriptar la clave privada antes de guardarla.
+        });
+
+        await newUser.save();
+        res.status(201).json({ message: 'Usuario creado exitosamente', publickey: wallet.address });
+    } catch (err) {
+        console.error('Error en user_signup:', err);
+        res.status(500).json({ error: err });
+    }
 };
+
 
 // OJO. Debido a que la sesion se maneja con un token jsonw web, el servidor no mantiene sesiones abiertas y es el cliente quien deb preservar el token durante la sesion
 // a eleccion del programador del cliente puede almacenar el token para enviarlo en cada interaccion con el server y cuando quiera cerrar sesion deberia simplemente
