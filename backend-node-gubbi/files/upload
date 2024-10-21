@@ -1,0 +1,7 @@
+const express = require('express');
+const router = express.Router();
+const FileController = require('../controllers/fileController'); // Controlador que maneja la subida de archivos
+
+router.post('/upload', FileController.uploadFile);
+
+module.exports = router;

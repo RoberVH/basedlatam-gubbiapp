@@ -27,7 +27,7 @@ exports.user_login = (req, res, next) => {
           const token = jwt.sign(
             {
               username: user[0].username,
-              userId: user[0]._id,
+              userId: user[0]._id,  // El _id se incluirá en el token
               publickey: user[0].publickey,
               cellnumber: user[0].cellnumber
             },
@@ -40,8 +40,9 @@ exports.user_login = (req, res, next) => {
             message: "Autorización exitosa",
             token: token,
             username: user[0].username,
+            userId: user[0]._id,  // Incluye el userId aquí explícitamente
             publickey: user[0].publickey,
-            privatekey: user[0].privatekey, ////PARA TEST 
+            privatekey: user[0].privatekey, // Solo para test
             cellnumber: user[0].cellnumber,
           });
         }
@@ -57,6 +58,10 @@ exports.user_login = (req, res, next) => {
       });
     });
 };
+
+
+
+
 
 // Función para registrar un nuevo usuario
 exports.user_signup = async (req, res, next) => {
