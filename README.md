@@ -8,7 +8,7 @@
 
 ## Repo contents
 
-## Sub poryects
+### Subproyects
 
 ### backend-no-gubbi 
 NodeJs backend to host 
@@ -24,3 +24,11 @@ NodeJs backend to host
 Smart Contracts to manages
   - ERC1155Gubbi Contract -> ERC1155 Token Logic  
   - GubbiRWATokenization Contract -> Real Workd Tokenization Business Rules
+
+  Team Members
+
+    Daniel Cruz             cryptorealityar@gmail.com
+
+    Jose Emmanuel Vazquez   jevgjosemmanuel@gmail.com
+
+    Roberto Vicuña          roberto.vicuna@gmail.com
