@@ -29,6 +29,24 @@ Smart Contracts to manages
 
     Daniel Cruz             cryptorealityar@gmail.com
 
-    Jose Emmanuel Vazquez   jevgjosemmanuel@gmail.com
+    Jose Emmanuel V.G       jevgjosemmanuel@gmail.com
 
     Roberto Vicuña          roberto.vicuna@gmail.com
+
+
+
+
+
+https://github.com/user-attachments/assets/0676849f-16ee-42de-8a77-a7cd7ddb40e4
+
+
+
+
+
+
+
+
+
+
+
+    
