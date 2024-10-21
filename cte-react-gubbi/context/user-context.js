@@ -17,34 +17,32 @@ export const UserContextProvider = ({ children }) => {
         username: null,
         token: null,
         publickey: null,
-        privatekey: null, // Incluir la clave privada
+        privatekey: null,
+        userId: null, // Aquí guardamos el userId
         cellnumber: null
     });
 
     // Cargar el usuario desde localStorage cuando se monta el componente
     useEffect(() => {
         const storedUser = JSON.parse(localStorage.getItem('gubbiUser'));
-        console.log("Usuario cargado desde localStorage:", storedUser); // Verifica qué datos hay en el localStorage
+        console.log("Usuario cargado desde localStorage:", storedUser);
         if (storedUser) {
           setUser(storedUser);
         }
-      }, []); // Se ejecuta solo una vez al montar el componente
-      
+    }, []);
 
-
-        const login = (userData) => {
-                console.log("Usuario guardado en el contexto:", userData);
-                localStorage.setItem('gubbiUser', JSON.stringify(userData));
-                setUser({
-                  username: userData.username,
-                  token: userData.token,
-                  publickey: userData.publickey,
-                  privatekey: userData.privatekey, // Incluir la clave privada
-                  cellnumber: userData.cellnumber,
-                });
-              };
-              
-        
+    const login = (userData) => {
+        console.log("Usuario guardado en el contexto:", userData);
+        localStorage.setItem('gubbiUser', JSON.stringify(userData));
+        setUser({
+            username: userData.username,
+            token: userData.token,
+            publickey: userData.publickey,
+            privatekey: userData.privatekey,
+            userId: userData.userId,  // Aquí se almacena el userId
+            cellnumber: userData.cellnumber,
+        });
+    };
 
     const logout = () => {
         localStorage.removeItem('gubbiUser');
@@ -52,7 +50,8 @@ export const UserContextProvider = ({ children }) => {
             username: null,
             token: null,
             publickey: null,
-            privatekey: null, // Incluir la clave privada
+            privatekey: null,
+            userId: null,
             cellnumber: null
         });
     };
