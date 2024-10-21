@@ -36,7 +36,8 @@ const SignInPage = (props) => {
           token: datos.token,
           publickey: datos.publickey,
           privatekey: datos.privatekey,
-          cellnumber: datos.cellnumber
+          cellnumber: datos.cellnumber,
+          userId: datos.userId // Incluir el userId en el contexto
         });
         router.push('/'); // Usar router.push para redireccionar
       } else {

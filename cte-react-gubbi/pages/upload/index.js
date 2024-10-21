@@ -1,11 +1,14 @@
 import styles from "../../styles/Home.module.css"; // Ajusta la ruta al archivo de estilo
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useContext } from "react";
 import WebBundlr from "@bundlr-network/client/build/web";
 import { providers, utils } from "ethers";
 import BigNumber from "bignumber.js";
 import { getRemoteBundler, uploadData } from "../utils/bundlr";
 import { networkConfig } from "../web3/web3config"
 import Image from "next/image";
+import UserContext from '../../context/user-context'; // Importar contexto de usuario
+
+
 
 
 export default function Home() {
@@ -21,6 +24,7 @@ export default function Home() {
   const [uploading, setuploading] = useState(false)
   const webBundlr = useRef()
   const provider = useRef()
+  const gubbiUser = useContext(UserContext) // Obtener usuario del contexto
 
   
   const getRmteBal = useCallback(async () => {
@@ -63,23 +67,74 @@ export default function Home() {
     setRemoteBundlr(remoteBundlr);
   };
 
-  const uploadFileServer = async () => {
-    if (!fileData) {
-      alert("Choose a File first!");
-      return;
-    } else {
-      setuploading(true)
-      const result= await uploadData(remoteBundlr, webBundlr, file, fileData)
-      if (result.status) {
-        console.log('result',result)
-        //setUploads(rest =>[...rest,[result.txid, `https://arweave.net/${result.txid}`]])
-        setUploads(rest =>[...rest,[result.txid, `https://gateway.irys.xyz/${result.txid}`]])
-        getRmteBal() // finally, display the changed balance of server account
-      } else alert('Something went wrong!')
-      setuploading(false)
-    }
 
-  };
+//////////// Upload file to server
+const uploadFileServer = async () => {
+  if (!fileData) {
+    alert("Choose a File first!");
+    return;
+  }
+
+  try {
+    setuploading(true); // Indicar que se está subiendo
+
+    // Subir el archivo a Web3/Bundlr y obtener la URL
+    const result = await uploadData(remoteBundlr, webBundlr, file, fileData);
+
+    if (result.status) {
+      console.log('result', result);
+
+      // URL generada después de la subida
+      const fileUrl = `https://gateway.irys.xyz/${result.txid}`;
+
+      // Obtener el userId desde el contexto
+      const userId = gubbiUser.userId;
+
+      if (!userId) {
+        alert('Error: No se ha encontrado el ID del usuario.');
+        return;
+      }
+
+      // Crear el cuerpo de la solicitud con el userId y la URL del archivo
+      const bodyData = JSON.stringify({
+        userId: userId,
+        url: fileUrl,
+        filename: file.name
+      });
+
+      // Enviar la URL y la información al backend
+      const response = await fetch('http://localhost:4000/files/upload', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: bodyData, // El cuerpo en formato JSON
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Archivo guardado en MongoDB:', data);
+
+        // Actualizar la lista de archivos subidos
+        setUploads((rest) => [...rest, [result.txid, fileUrl]]);
+        getRmteBal(); // Actualizar el balance
+      } else {
+        alert('Error al guardar el archivo en el backend');
+      }
+    } else {
+      alert('Algo salió mal al subir el archivo.');
+    }
+  } catch (error) {
+    console.error('Error al subir archivo:', error);
+    alert('Ocurrió un error durante la subida.');
+  } finally {
+    setuploading(false); // Indicar que la subida ha terminado
+  }
+};
+
+////////////  
+
+
   const handleFileChange = async (e) => {
     const reader = new FileReader();
     const file = e.target.files[0];

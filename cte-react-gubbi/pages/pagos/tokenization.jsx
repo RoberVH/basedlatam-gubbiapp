@@ -1,10 +1,7 @@
-// components/pagos/Tokenization.jsx
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import VoiceAssistant from '../ui/VoiceAssistant'; // Asistente de voz
 
 const Tokenization = () => {
-  // Estado para los detalles del activo
   const [activo, setActivo] = useState({
     tipo: 'Terreno',
     nombre: '',
@@ -13,16 +10,30 @@ const Tokenization = () => {
     tokensDisponibles: 1000,
   });
 
-  // Estado para las transacciones
   const [transaccion, setTransaccion] = useState({
     cantidad: '',
     accion: 'comprar',
   });
 
-  // Estado para el resultado de la transacción
   const [resultado, setResultado] = useState(null);
+  const [archivos, setArchivos] = useState([]); // Para almacenar las URLs de los archivos
+  const [archivoSeleccionado, setArchivoSeleccionado] = useState(null); // Archivo seleccionado por el usuario
 
-  // Manejar cambios en el formulario de detalles del activo
+  // Llamada al backend para obtener los archivos subidos
+  useEffect(() => {
+    const fetchArchivos = async () => {
+      try {
+        const response = await fetch('http://localhost:4000/files/all'); // Llamada al backend
+        const data = await response.json();
+        setArchivos(data); // Guardar los archivos en el estado
+      } catch (error) {
+        console.error('Error al obtener archivos:', error);
+      }
+    };
+
+    fetchArchivos();
+  }, []);
+
   const handleActivoChange = (e) => {
     setActivo({
       ...activo,
@@ -30,7 +41,6 @@ const Tokenization = () => {
     });
   };
 
-  // Manejar cambios en el formulario de transacciones
   const handleTransaccionChange = (e) => {
     setTransaccion({
       ...transaccion,
@@ -38,7 +48,6 @@ const Tokenization = () => {
     });
   };
 
-  // Simulación de transacción
   const handleTransaccion = (e) => {
     e.preventDefault();
     const { cantidad, accion } = transaccion;
@@ -47,10 +56,10 @@ const Tokenization = () => {
       return;
     }
 
-    const totalTokens = accion === 'comprar' 
-      ? activo.tokensDisponibles - parseInt(cantidad) 
+    const totalTokens = accion === 'comprar'
+      ? activo.tokensDisponibles - parseInt(cantidad)
       : activo.tokensDisponibles + parseInt(cantidad);
-    
+
     setActivo((prevState) => ({
       ...prevState,
       tokensDisponibles: totalTokens,
@@ -65,7 +74,34 @@ const Tokenization = () => {
         <p className="text-gray-600 text-lg mb-8 text-center">
           Gubbi conecta a las comunidades rurales con el mundo financiero moderno, permitiendo la tokenización de activos como terrenos, ganado, maquinaria agrícola, y más.
         </p>
-        
+
+        {/* Sección para mostrar archivos subidos */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-semibold mb-4 text-gray-800">Selecciona un archivo para asociarlo al activo</h2>
+          <div className="flex space-x-4 overflow-x-auto">
+            {archivos.length > 0 ? (
+              archivos.map((archivo) => (
+                <div key={archivo._id} className="w-48 h-48 border border-gray-300 rounded-lg flex justify-center items-center">
+                  <img
+                    src={archivo.url}
+                    alt={archivo.filename}
+                    className="max-w-full max-h-full object-cover cursor-pointer"
+                    onClick={() => setArchivoSeleccionado(archivo.url)}
+                  />
+                </div>
+              ))
+            ) : (
+              <p>No hay archivos disponibles.</p>
+            )}
+          </div>
+          {archivoSeleccionado && (
+            <div className="mt-4">
+              <p><strong>Archivo seleccionado:</strong></p>
+              <img src={archivoSeleccionado} alt="Archivo seleccionado" className="max-w-full max-h-full object-cover" />
+            </div>
+          )}
+        </div>
+
         {/* Formulario para detalles del activo */}
         <div className="mb-8">
           <h2 className="text-2xl font-semibold mb-4 text-gray-800">Detalles del Activo</h2>
@@ -143,28 +179,24 @@ const Tokenization = () => {
           <h2 className="text-2xl font-semibold mb-4 text-gray-800">Realiza una Transacción</h2>
           <form onSubmit={handleTransaccion} className="space-y-6">
             <div>
-              <label htmlFor="cantidad" className="block text-sm font-medium text-gray-700">
-                Cantidad de Tokens
-              </label>
+              <label htmlFor="cantidad" className="block text-sm font-medium text-gray-700">Cantidad de Tokens</label>
               <input
                 type="number"
                 id="cantidad"
                 name="cantidad"
                 onChange={handleTransaccionChange}
-                className="mt-2 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-4 focus:ring-green-500 focus:border-green-500"
+                className="mt-2 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm"
                 placeholder="Ingresa la cantidad de tokens"
               />
             </div>
 
             <div>
-              <label htmlFor="accion" className="block text-sm font-medium text-gray-700">
-                Acción
-              </label>
+              <label htmlFor="accion" className="block text-sm font-medium text-gray-700">Acción</label>
               <select
                 id="accion"
                 name="accion"
                 onChange={handleTransaccionChange}
-                className="mt-2 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-4 focus:ring-green-500 focus:border-green-500"
+                className="mt-2 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm"
               >
                 <option value="comprar">Comprar Tokens</option>
                 <option value="vender">Vender Tokens</option>
@@ -173,13 +205,12 @@ const Tokenization = () => {
 
             <button
               type="submit"
-              className="w-full bg-green-600 text-white px-6 py-3 rounded-md shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50"
+              className="w-full bg-green-600 text-white px-6 py-3 rounded-md shadow-md hover:bg-green-700"
             >
               Realizar Transacción
             </button>
           </form>
 
-          {/* Mostrar el resultado de la transacción */}
           {resultado && (
             <div className="mt-6 p-4 bg-green-100 text-green-700 rounded-md shadow-md">
               {resultado}
@@ -187,7 +218,6 @@ const Tokenization = () => {
           )}
         </div>
 
-        {/* Asistente de voz */}
         <div className="mb-8">
           <h2 className="text-2xl font-semibold mb-4 text-gray-800">Navegación Asistida por Voz</h2>
           <div className="flex justify-center">
@@ -200,3 +230,9 @@ const Tokenization = () => {
 };
 
 export default Tokenization;
+
+
+
+
+
+        
